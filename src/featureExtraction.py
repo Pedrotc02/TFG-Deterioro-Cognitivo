@@ -6,12 +6,16 @@ from sklearn.feature_extraction.text import CountVectorizer
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 from textblob import TextBlob
+from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+import torch
 
 nltk.download("stopwords")
 nlp = spacy.load("es_core_news_sm")
 embedder = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 stopwords = set(nltk.corpus.stopwords.words("spanish"))
 sentimentAnalyzer = pipeline("sentiment-analysis", model="nlptown/bert-base-multilingual-uncased-sentiment")
+modelPerplexity = GPT2LMHeadModel.from_pretrained("datificate/gpt2-small-spanish")
+tokenizer = GPT2TokenizerFast.from_pretrained("datificate/gpt2-small-spanish")
 
 class featureExtraction:
 
@@ -79,36 +83,50 @@ class featureExtraction:
         }
     
 
+    def sentimentAnalysis(self):
+            sentimentResult = sentimentAnalyzer(self.text)[0]
+            sentimentLabel = sentimentResult["label"]
+            sentimentScore = sentimentResult["score"]
+
+            sentimentMapping = {
+                "1 stars": 0,
+                "2 stars": 1,
+                "3 stars": 2,
+                "4 stars": 3,
+                "5 stars": 4
+            }
+            sentimentValue = sentimentMapping.get(sentimentLabel, 0)
+
+            blob = TextBlob(self.text)
+            polarity = blob.sentiment.polarity
+            subjectivity = blob.sentiment.subjectivity
+
+            return {
+                "sentiment-value": sentimentValue,
+                "sentiment-score": sentimentScore,
+                "polarity": polarity,
+                "subjectivity": subjectivity
+            }
+
+
+    def perplexity(self):
+        inputs = tokenizer(self.text, return_tensors="pt", truncation=True, max_length=512)
+        with torch.no_grad():
+            outputs = modelPerplexity(**inputs, labels=inputs["input_ids"])
+            loss = outputs.loss
+            perplexityResult = torch.exp(loss).item()
+
+        return {
+            "perplexity": perplexityResult
+        }
+
+
     def extractFeatures(self):
         features = {}
         features.update(self.lexicalFeatures())
         features.update(self.syntacticFeatures())
         features.update(self.semanticFeatures())
         features.update(self.sentimentAnalysis())
+        features.update(self.perplexity())
         return features
     
-
-    def sentimentAnalysis(self):
-        sentimentResult = sentimentAnalyzer(self.text)[0]
-        sentimentLabel = sentimentResult["label"]
-        sentimentScore = sentimentResult["score"]
-
-        sentimentMapping = {
-            "1 stars": 0,
-            "2 stars": 1,
-            "3 stars": 2,
-            "4 stars": 3,
-            "5 stars": 4
-        }
-        sentimentValue = sentimentMapping.get(sentimentLabel, 0)
-
-        blob = TextBlob(self.text)
-        polarity = blob.sentiment.polarity
-        subjectivity = blob.sentiment.subjectivity
-
-        return {
-            "sentiment-value": sentimentValue,
-            "sentiment-score": sentimentScore,
-            "polarity": polarity,
-            "subjectivity": subjectivity
-        }
