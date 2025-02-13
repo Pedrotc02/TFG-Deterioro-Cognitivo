@@ -34,7 +34,7 @@ class processingData:
     def saveSelectedFeaturings(self, filePath):
         pr = pd.DataFrame(pd.read_csv(filePath))
         filter = filterFeaturings()
-        dfFilter = filter.bestFeaturings(pr.drop(columns=["Audio", "Sentence", "Start", "End", "Class", "Type", "Offtopic", "CódigoSujeto", "Grupo"]), self.dataframe["Grupo"], 10)
+        dfFilter = filter.bestFeaturings(pr.drop(columns=["Audio", "Sentence", "Start", "End", "CodigoSujeto", "Grupo"]), self.dataframe["Grupo"], 10)
 
         finaldf = pd.concat([dfFilter, self.dataframe["Grupo"]], axis=1)
         finaldf.to_csv(self.outputFilePathFilter, index=False)
