@@ -1,6 +1,6 @@
 from sklearn.feature_selection import SelectKBest, f_classif
 
-class filterFeaturings:
+class FilterFeaturings:
     
     def __init__(self):
         self.dataframe = {}

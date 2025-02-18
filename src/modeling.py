@@ -12,7 +12,7 @@ models = {
     'random_forest': RandomForestClassifier(n_estimators=100, max_depth=3, min_samples_split=5, random_state=42)
 }
 
-class modeling:
+class Modeling:
 
     def __init__(self, X, y):
         self.X = X

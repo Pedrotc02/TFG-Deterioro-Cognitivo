@@ -1,6 +1,6 @@
-from processingData import processingData
-from filterFeaturings import filterFeaturings
-from modeling import modeling
+from ProcessingData import ProcessingData
+from Modeling import Modeling
+from AutoML import AutoML
 import pandas as pd
 
 interviewsPaths = {
@@ -23,11 +23,11 @@ outputPathsFilter = {
 
 
 def processInterview(topic):
-    psData = processingData(interviewsPaths[topic], "Sentence", outputPaths[topic], outputPathsFilter[topic])
+    psData = ProcessingData(interviewsPaths[topic], "Sentence", outputPaths[topic], outputPathsFilter[topic])
     psData.processDataset()
     psData.saveSelectedFeaturings(outputPaths[topic])
 
-    psData.dataframe = pd.read_csv(outputPathsFilter["chica_ocupada"])
+    psData.dataframe = pd.read_csv(outputPathsFilter[topic])
     df = psData.dataframe
 
     X = df.drop(columns=["Grupo"])
@@ -35,8 +35,10 @@ def processInterview(topic):
     y = df["Grupo"]
 
     print(topic.upper())
-    model = modeling(X, y)
-    model.trainModel(X, y)
+    automl = AutoML(problemType="regression", generations=10, populationSize=20)
+    automl.fit(X, y)
+
+    automl.saveModel(f"./models/{topic}_automl.pkl")
 
 
 

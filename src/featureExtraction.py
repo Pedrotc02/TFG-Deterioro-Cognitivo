@@ -17,7 +17,7 @@ sentimentAnalyzer = pipeline("sentiment-analysis", model="nlptown/bert-base-mult
 modelPerplexity = GPT2LMHeadModel.from_pretrained("datificate/gpt2-small-spanish")
 tokenizer = GPT2TokenizerFast.from_pretrained("datificate/gpt2-small-spanish")
 
-class featureExtraction:
+class FeatureExtraction:
 
     def __init__(self, text):
         self.text = text

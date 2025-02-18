@@ -1,8 +1,8 @@
 import pandas as pd
-from featureExtraction import featureExtraction
-from filterFeaturings import filterFeaturings
+from FeatureExtraction import FeatureExtraction
+from FilterFeaturings import FilterFeaturings
 
-class processingData:
+class ProcessingData:
 
     def __init__(self, filePath, textColumn, outputFilePath, outputFilePathFilter):
         self.filePath = filePath
@@ -22,7 +22,7 @@ class processingData:
         
         featuresList = []
         for text in texts:
-            fExtraction = featureExtraction(text)
+            fExtraction = FeatureExtraction(text)
             featuresList.append(fExtraction.extractFeatures())
 
         featureDf = pd.DataFrame(featuresList)
@@ -33,8 +33,8 @@ class processingData:
 
     def saveSelectedFeaturings(self, filePath):
         pr = pd.DataFrame(pd.read_csv(filePath))
-        filter = filterFeaturings()
-        dfFilter = filter.bestFeaturings(pr.drop(columns=["Audio", "Sentence", "Start", "End", "CodigoSujeto", "Grupo"]), self.dataframe["Grupo"], 10)
+        filter = FilterFeaturings()
+        dfFilter = filter.bestFeaturings(pr.drop(columns=["Sentence", "Grupo"]), self.dataframe["Grupo"], 10)
 
         finaldf = pd.concat([dfFilter, self.dataframe["Grupo"]], axis=1)
         finaldf.to_csv(self.outputFilePathFilter, index=False)
