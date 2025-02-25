@@ -19,8 +19,10 @@ tokenizer = GPT2TokenizerFast.from_pretrained("datificate/gpt2-small-spanish")
 
 class FeatureExtraction:
 
-    def __init__(self, text):
+    def __init__(self, text, duracionFrase, duracionPalabra):
         self.text = text
+        self.duracionFrase = duracionFrase
+        self.duracionPalabra = duracionPalabra
         self.doc = nlp(text)
         self.words = [token.text.lower() for token in self.doc if token.is_alpha]
         self.numWords = len(self.words)
@@ -119,6 +121,18 @@ class FeatureExtraction:
         return {
             "perplexity": perplexityResult
         }
+    
+
+    def durationSentence(self):
+        return {
+            "duration-sentence": self.duracionFrase
+        }
+    
+
+    def durationWord(self):
+        return {
+            "duration-word": self.duracionPalabra
+        }
 
 
     def extractFeatures(self):
@@ -128,5 +142,7 @@ class FeatureExtraction:
         features.update(self.semanticFeatures())
         features.update(self.sentimentAnalysis())
         features.update(self.perplexity())
+        features.update(self.durationSentence())
+        features.update(self.durationWord())
         return features
     

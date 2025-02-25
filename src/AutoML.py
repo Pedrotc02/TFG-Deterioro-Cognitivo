@@ -1,6 +1,7 @@
 from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.model_selection import train_test_split
 import joblib
+import warnings
 
 class AutoML:
     def __init__(self, problemType, generations, populationSize, cv=5):
