@@ -2,6 +2,7 @@ from ProcessingData import ProcessingData
 from Modeling import Modeling
 from AutoML import AutoML
 import pandas as pd
+import numpy as np
 
 Paths = {
             "sentences": "./data/dataset.tsv",
@@ -10,19 +11,29 @@ Paths = {
 }
 
 
+"""print("********** Extracting Features **********")
 psData = ProcessingData(Paths["sentences"], "Sentence", Paths["sentencesFeatures"], Paths["sentencesFeaturesFilter"])
 psData.processDataset()
-psData.saveSelectedFeaturings(Paths["sentencesFeatures"])
+psData.saveSelectedFeaturings(Paths["sentencesFeatures"])"""
 
-psData.dataframe = pd.read_csv(Paths["sentencesFeaturesFilter"])
-df = psData.dataframe
+# Selecionar las k mejores características
 
-X = df.drop(columns=["Grupo"])
-X = X.select_dtypes(include=['number']).dropna()
+"""psData.dataframe = pd.read_csv(Paths["sentencesFeaturesFilter"], sep='\t')
+df = psData.dataframe"""
+
+
+df = pd.read_csv(Paths["sentencesFeaturesFilter"], sep='\t')
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+df.fillna(df.mean(), inplace=True)
+
+X = df.drop(columns=["Grupo", "CodigoSujeto"])
+X = X.select_dtypes(include=['number'])
 y = df["Grupo"]
+subjects = df["CodigoSujeto"]
+
 
 print("********** AutoML **********")
 automl = AutoML("classification", 10, 30)
-automl.fit(X, y)
+automl.fit(X, y, subjects)
 
 automl.saveModel(f"./models/model_automl.pkl")

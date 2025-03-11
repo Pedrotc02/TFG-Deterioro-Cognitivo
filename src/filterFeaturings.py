@@ -1,4 +1,5 @@
 from sklearn.feature_selection import SelectKBest, f_classif
+import numpy as np
 
 class FilterFeaturings:
     
@@ -15,3 +16,18 @@ class FilterFeaturings:
         
         return X[featuresSelected]
 
+
+    def bestFeaturesPearson(self, df, target, threshold):
+        correlations = {}
+        for column in df.columns:
+            if column != target:
+                corr = df[column].corr(df[target])
+                if not np.isnan(corr):
+                    correlations[column] = corr
+
+        bestFeatures = [feature for feature, corr in correlations.items() if abs(corr) > threshold]
+
+        if not bestFeatures:
+            print("No features found")
+
+        return df[bestFeatures]

@@ -2,12 +2,13 @@ import spacy
 import nltk
 import numpy as np
 from collections import Counter
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 from textblob import TextBlob
 from transformers import GPT2LMHeadModel, GPT2TokenizerFast
 import torch
+import textstat
 
 nltk.download("stopwords")
 nlp = spacy.load("es_core_news_sm")
@@ -16,6 +17,8 @@ stopwords = set(nltk.corpus.stopwords.words("spanish"))
 sentimentAnalyzer = pipeline("sentiment-analysis", model="nlptown/bert-base-multilingual-uncased-sentiment")
 modelPerplexity = GPT2LMHeadModel.from_pretrained("datificate/gpt2-small-spanish")
 tokenizer = GPT2TokenizerFast.from_pretrained("datificate/gpt2-small-spanish")
+vectorizer = TfidfVectorizer()
+textstat.set_lang("es")
 
 class FeatureExtraction:
 
@@ -135,6 +138,29 @@ class FeatureExtraction:
         }
 
 
+    def tfidf(self):
+        tfidfMatrix = vectorizer.fit_transform([self.text]).toarray()
+        tfidfMean = np.mean(tfidfMatrix)
+
+        return {
+            "tfidf-mean": tfidfMean
+        }
+    
+
+    def staticsText(self):
+        #Adaption of Flesch Reading Ease for Spanish
+        readability = textstat.fernandez_huerta(self.text)
+        szigriszt = textstat.szigriszt_pazos(self.text)
+
+        monosyllable = textstat.monosyllabcount(self.text)
+
+        return {
+            "readabilityFernandez": readability,
+            "readabilitySzigriszt": szigriszt,
+            "monosyllable": monosyllable
+        }
+
+
     def extractFeatures(self):
         features = {}
         features.update(self.lexicalFeatures())
@@ -144,5 +170,8 @@ class FeatureExtraction:
         features.update(self.perplexity())
         features.update(self.durationSentence())
         features.update(self.durationWord())
+        features.update(self.tfidf())
+        features.update(self.staticsText())
+        
         return features
     

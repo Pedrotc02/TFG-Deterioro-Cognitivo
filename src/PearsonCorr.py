@@ -1,14 +1,16 @@
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 
 # Cargar el CSV
-file_path = "../data/chicaOcupada/chica_ocupada_features_filter.csv"  # Reemplaza con el nombre de tu archivo
+file_path = "./data/features/sentences_features.tsv"  # Reemplaza con el nombre de tu archivo
 
-df = pd.read_csv(file_path, delimiter=',')  # Asume que los datos están separados por tabulaciones
-
-print(df.head())
+df = pd.read_csv(file_path, sep='\t')  # Asume que los datos están separados por tabulaciones
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+df.fillna(0, inplace=True)
+df = df.drop(columns=["CodigoSujeto"])
 
 # Variable dependiente
 target = "Grupo"
@@ -20,8 +22,13 @@ for column in df.columns:
         corr, _ = pearsonr(df[column], df[target])
         correlations[column] = corr
 
+
+threshold = 0.1
+
+bestFeatures = {feature: corr for feature, corr in correlations.items() if abs(corr) > threshold}
+
 # Convertir a DataFrame para el heatmap
-corr_df = pd.DataFrame.from_dict(correlations, orient='index', columns=[target])
+corr_df = pd.DataFrame.from_dict(bestFeatures, orient='index', columns=[target])
 
 # Graficar heatmap
 plt.figure(figsize=(10, 6))
