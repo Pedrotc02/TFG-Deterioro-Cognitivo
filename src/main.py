@@ -31,9 +31,8 @@ X = X.select_dtypes(include=['number'])
 y = df["Grupo"]
 subjects = df["CodigoSujeto"]
 
-
 print("********** AutoML **********")
-automl = AutoML("classification", 10, 30)
-automl.fit(X, y, subjects)
+automl = AutoML(10, 20, 10, 30)
+automl.fit(X.values, y, subjects)
 
-automl.saveModel(f"./models/model_automl.pkl")
+automl.saveModel(f"./models/model_automl_binary.pkl", "./models/model_automl_multilevel.pkl")

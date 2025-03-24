@@ -1,81 +1,101 @@
 from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.model_selection import train_test_split
 import joblib
-import warnings
+from sklearn.metrics import f1_score
 
 class AutoML:
-    def __init__(self, problemType, generations, populationSize, cv=5):
-        self.problemType = problemType
-        self.generations = generations
-        self.populationSize = populationSize
+    def __init__(self, generationsBinary, populationSizeBinary, generationsMulti, populationSizeMulti, cv=5):
+        self.generationsBinary = generationsBinary
+        self.populationSizeBinary = populationSizeBinary
+        self.generationsMulti = generationsMulti
+        self.populationSizeMulti = populationSizeMulti
         self.cv = cv
-        
-        if self.problemType == "classification":
-            self.model = TPOTClassifier(
-                generations=self.generations, 
-                population_size=self.populationSize, 
-                cv=self.cv, 
-                verbosity=2, 
-                n_jobs=-1,
-                scoring='balanced_accuracy',
-                random_state=42
-            )
+
+        self.binary_model = TPOTClassifier(
+            generations=self.generationsBinary, 
+            population_size=self.populationSizeBinary, 
+            cv=self.cv, 
+            verbosity=2, 
+            n_jobs=-1,
+            scoring='f1_weighted',
+            random_state=42
+        )
             
-        elif self.problemType == "regression":
-            self.model = TPOTRegressor(
-                generations=self.generations, 
-                population_size=self.populationSize, 
-                cv=self.cv, 
-                verbosity=2, 
-                n_jobs=-1,
-                scoring='balanced_accuracy',
-                random_state=42
-            )
+        self.multilevel_model = TPOTClassifier(
+            generations=self.generationsMulti, 
+            population_size=self.populationSizeMulti, 
+            cv=self.cv, 
+            verbosity=2, 
+            n_jobs=-1,
+            scoring='f1_weighted',
+            random_state=42
+        )
+        
 
-        else:
-            raise ValueError("Tipo de problema no válido. Usa classification o regression")
-
-
-    def fit(self, X, y, subjects):
+    def splitSubjects(self, X, y, subjects):
         train_subjects, test_subjects = train_test_split(subjects.unique(), test_size=0.2, random_state=42)
 
-        if self.model is None:
-            raise ValueError("No se ha inicializado el modelo")
-        
         train_indices = subjects.isin(train_subjects)
         test_indices = subjects.isin(test_subjects)
 
-        X_train, X_test = X[train_indices], X[test_indices]
-        y_train, y_test = y[train_indices], y[test_indices]
+        return X[train_indices], X[test_indices], y[train_indices], y[test_indices]
 
-        self.model.fit(X_train, y_train)
-        score = self.model.score(X_test, y_test)
-        print(f"Best Score: {score:.4f}")
 
-        return score
+    def fit(self, X, y, subjects):
+        #Modelo binario
+        y_binary = y.apply(lambda x: 0 if x == 0 else 1)
+
+        X_train_bin, X_test_bin, y_train_bin, y_test_bin = self.splitSubjects(X, y_binary, subjects)
+
+        self.binary_model.fit(X_train_bin, y_train_bin)
+        score_bin = self.binary_model.score(X_test_bin, y_test_bin)
+        print(f"Best Score (Modelo binario): {score_bin:.4f}")
+
+        #Modelo multiclase
+        group = y != 0
+        X_multilevel = X[group]
+        y_multilevel = y[group]
+        subjects_multilevel = subjects[group]
+
+        X_train_multi, X_test_multi, y_train_multi, y_test_multi = self.splitSubjects(X_multilevel, y_multilevel, subjects_multilevel)
+
+        self.multilevel_model.fit(X_train_multi, y_train_multi)
+        score_multi = self.multilevel_model.score(X_test_multi, y_test_multi)
+        print(f"Best Score (Modelo multiclase): {score_multi:.4f}")
+
+        #Puntuacion combinado
+
+        """score_combined = (f1_lvl1 * weights[0]) + (f1_lvl2 * weights[1]) + (f1_lvl3 * weights[2])
+
+        print(f"Best Score (Modelo combinado): {score_combined:.4f}")"""
+
+        return score_bin, score_multi
     
 
-    def saveModel(self, filePath):
-        if self.model is None:
-            raise ValueError("No se ha entrenado el modelo")
-        
-        joblib.dump(self.model.fitted_pipeline_, filePath)
-    
+    def saveModel(self, filePathBinary, filePathMultilevel): 
+        joblib.dump(self.binary_model.fitted_pipeline_, filePathBinary)
+        joblib.dump(self.multilevel_model.fitted_pipeline_, filePathMultilevel)
+        print("Modelos guardados correctamente")
 
-    def loadModel(self, filePath):
+
+    def loadModel(self, filePathBinary, filePathMultilevel):
         try:
-            modeloCargado = joblib.load(filePath)
-            if modeloCargado is not None:
-                self.model = modeloCargado
-            else:
-                raise ValueError("El archivo del modelo esta vacio")
+            self.binary_model = joblib.load(filePathBinary)
+            self.multilevel_model = joblib.load(filePathMultilevel)
+            print("Modelos cargados correctamente")
         except:
-            raise ValueError("No se pudo cargar el modelo")
+            raise ValueError("Error al cargar los modelos")
     
 
     def predict(self, X):
-        if self.model is None:
-            raise ValueError("No se ha entrenado el modelo")
-        
-        return self.model.predict(X)
+        if self.binary_model is None or self.multilevel_model is None:
+            raise ValueError("Los modelos no han sido cargados o entrenados")
+
+        pred_bin = self.model_binario.predict(X)[0]
+
+        if pred_bin == 0:
+            return 0 
+        else:
+            return self.model_multinivel.predict(X)[0]
+
 
