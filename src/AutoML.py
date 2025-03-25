@@ -2,6 +2,8 @@ from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.model_selection import train_test_split
 import joblib
 from sklearn.metrics import f1_score
+from sklearn.utils.class_weight import compute_class_weight
+import numpy as np
 
 class AutoML:
     def __init__(self, generationsBinary, populationSizeBinary, generationsMulti, populationSizeMulti, cv=5):
@@ -51,6 +53,7 @@ class AutoML:
         score_bin = self.binary_model.score(X_test_bin, y_test_bin)
         print(f"Best Score (Modelo binario): {score_bin:.4f}")
 
+
         #Modelo multiclase
         group = y != 0
         X_multilevel = X[group]
@@ -63,13 +66,20 @@ class AutoML:
         score_multi = self.multilevel_model.score(X_test_multi, y_test_multi)
         print(f"Best Score (Modelo multiclase): {score_multi:.4f}")
 
+
         #Puntuacion combinado
+        num_bin = len(y_train_bin) + len(y_test_bin)
+        num_multi = len(y_train_multi) + len(y_test_multi)
+        total_samples = num_bin + num_multi
 
-        """score_combined = (f1_lvl1 * weights[0]) + (f1_lvl2 * weights[1]) + (f1_lvl3 * weights[2])
+        weight_bin = num_bin / total_samples
+        weight_multi = num_multi / total_samples
 
-        print(f"Best Score (Modelo combinado): {score_combined:.4f}")"""
+        score_combined = (score_bin * weight_bin) + (score_multi * weight_multi)
 
-        return score_bin, score_multi
+        print(f"Best Score (Modelo combinado): {score_combined:.4f}")
+
+        return score_bin, score_multi, score_combined
     
 
     def saveModel(self, filePathBinary, filePathMultilevel): 
