@@ -8,15 +8,20 @@ class Metrics:
         self.y_true = df["Grupo"]
         self.y_pred = df["predicted_label"]
 
+        self.mask = self.y_pred.notna()
+        self.y_true_filtered = self.y_true[self.mask]
+        self.y_pred_filtered = self.y_pred[self.mask]
+        
+
 
     def evaluateGeneral(self):
         """
         Métricas generales del rendimiento del modelo
         """
-        accuracy = accuracy_score(self.y_true, self.y_pred)
-        macro_f1 = f1_score(self.y_true, self.y_pred, average='macro')
-        micro_f1 = f1_score(self.y_true, self.y_pred, average='micro')
-        weighted_f1 = f1_score(self.y_true, self.y_pred, average='weighted')
+        accuracy = accuracy_score(self.y_true_filtered, self.y_pred_filtered)
+        macro_f1 = f1_score(self.y_true_filtered, self.y_pred_filtered, average='macro')
+        micro_f1 = f1_score(self.y_true_filtered, self.y_pred_filtered, average='micro')
+        weighted_f1 = f1_score(self.y_true_filtered, self.y_pred_filtered, average='weighted')
         
 
         result = (
@@ -34,8 +39,8 @@ class Metrics:
         """
         Métricas para el modelo binario
         """
-        y_true_binary = (self.y_true > 0).astype(int)
-        y_pred_binary = (self.y_pred > 0).astype(int)
+        y_true_binary = (self.y_true_filtered > 0).astype(int)
+        y_pred_binary = (self.y_pred_filtered > 0).astype(int)
 
         precision_bin = precision_score(y_true_binary, y_pred_binary)
         recall_bin = recall_score(y_true_binary, y_pred_binary)
@@ -57,8 +62,8 @@ class Metrics:
         """
         Métricas para el modelo multinivel
         """
-        report = classification_report(self.y_true, self.y_pred, digits=4)
-        cm = confusion_matrix(self.y_true, self.y_pred)
+        report = classification_report(self.y_true_filtered, self.y_pred_filtered, digits=4)
+        cm = confusion_matrix(self.y_true_filtered, self.y_pred_filtered)
 
         result = (
             f"\n# MÉTRICAS MULTICLASE (Grado de deterioro)\n"
@@ -90,6 +95,6 @@ class Metrics:
 
 
 # Prueba 
-df = pd.read_csv("./predictions/roberta_predictions.tsv", sep="\t")
+df = pd.read_csv("./predictions/output_cognitive_roberta.tsv", sep="\t")
 metrics = Metrics(df)
-metrics.saveMetrics("./predictions/roberta_predictions.tsv")
+metrics.saveMetrics("./predictions/output_cognitive_roberta.tsv")
