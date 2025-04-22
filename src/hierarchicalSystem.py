@@ -2,6 +2,7 @@ from ProcessingData import ProcessingData
 from AutoML import AutoML
 import pandas as pd
 import numpy as np
+import json
 
 Paths = {
             "sentencesBinaryClass": "./data/separacionGrupos/dataset_clasebinaria.tsv",
@@ -15,23 +16,37 @@ Paths = {
 }
 
 
-print("********** Extracting Features BinaryClass**********")
-psDataBinaryClass = ProcessingData(Paths["sentencesBinaryClass"], "TextoCompleto", Paths["sentencesFeaturesBinaryClass"], Paths["sentencesFeaturesFilterBinaryClass"])
+print("********** Extracting Features BinaryClass **********")
+psDataBinaryClass = ProcessingData(Paths["sentencesBinaryClass"], "Sentence", Paths["sentencesFeaturesBinaryClass"], Paths["sentencesFeaturesFilterBinaryClass"])
 psDataBinaryClass.processDataset()
 psDataBinaryClass.saveSelectedFeaturings(Paths["sentencesFeaturesBinaryClass"])
 
 print("********** Extracting Features Multiclass **********")
-psDataMultiClass = ProcessingData(Paths["sentencesMultiClass"], "TextoCompleto", Paths["sentencesFeaturesMultiClass"], Paths["sentencesFeaturesFilterMultiClass"])
+psDataMultiClass = ProcessingData(Paths["sentencesMultiClass"], "Sentence", Paths["sentencesFeaturesMultiClass"], Paths["sentencesFeaturesFilterMultiClass"])
 psDataMultiClass.processDataset()
 psDataMultiClass.saveSelectedFeaturings(Paths["sentencesFeaturesMultiClass"])
 
 
-# Selecionar las k mejores características
+# Selecionar las k mejores características comunes
+print("********** Selecting common features **********")
 psDataBinaryClass.dataframe = pd.read_csv(Paths["sentencesFeaturesFilterBinaryClass"], sep='\t')
-df_binaryClass = psDataBinaryClass.dataframe
-
 psDataMultiClass.dataframe = pd.read_csv(Paths["sentencesFeaturesFilterMultiClass"], sep='\t')
-df_multiClass = psDataMultiClass.dataframe
+
+cols_exclude = ["Grupo", "CodigoSujeto"]
+
+featuresBinary = set(psDataBinaryClass.dataframe.columns) - set(cols_exclude)
+featuresMultiClass = set(psDataMultiClass.dataframe.columns) - set(cols_exclude)
+
+commonFatures = featuresBinary.intersection(featuresMultiClass)
+finalColumns = list(commonFatures) + cols_exclude
+with open ("./data/commonFeatures/columns.json", "w") as f:
+    json.dump(finalColumns, f)
+
+df_binaryClass = psDataBinaryClass.dataframe[finalColumns]
+df_multiClass = psDataMultiClass.dataframe[finalColumns]
+
+df_binaryClass.to_csv(Paths["sentencesFeaturesFilterBinaryClass"], index=False, sep="\t")
+df_multiClass.to_csv(Paths["sentencesFeaturesFilterMultiClass"], index=False, sep="\t")
 
 
 # Rellenar valores NaN
@@ -42,7 +57,6 @@ df_binaryClass.fillna(0, inplace=True)
 df_multiClass.replace([np.inf, -np.inf], np.nan, inplace=True)
 df_multiClass.fillna(df_multiClass.mean(), inplace=True)
 df_multiClass.fillna(0, inplace=True)
-
 
 # Separación jerárquica
 X_A = df_binaryClass.drop(columns=["Grupo", "CodigoSujeto"])
@@ -57,15 +71,14 @@ subjects = df_multiClass["CodigoSujeto"]
 
 
 print("********** AutoML **********")
+automl = AutoML(10, 20, 10, 30)
+
 subjectsBinary = df_binaryClass["CodigoSujeto"]
-automl_binaryClass = AutoML("classification",10, 20)
-automl_binaryClass.fit(X_A.values, y_A, subjectsBinary, "./columns_test_train/binaryClass.pkl")
+automl.fit(X_A.values, y_A, subjectsBinary, modo="binary")
 
 subjectsMulti = df_multiClass["CodigoSujeto"]
-automl_multiclass = AutoML("classification",10, 30)
-automl_multiclass.fit(X_B.values, y_B, subjectsMulti, "./columns_test_train/multiClass.pkl")
+automl.fit(X_B.values, y_B, subjectsMulti, modo="multilevel")
 
 
-#Guardado de los modelos
-automl_binaryClass.saveModel(f"./models/model_automl_binaryClass.pkl")
-automl_multiclass.saveModel(f"./models/model_automl_multiClass.pkl")
+print("********** Saving Models **********")
+automl.saveModel(f"./models/model_automl_binaryClass.pkl", "./models/model_automl_multiClass.pkl")

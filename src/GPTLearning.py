@@ -11,7 +11,7 @@ class CognitiveOutput(BaseModel):
 
 class GPTLearning:
     def __init__(self):
-        self.client = OpenAI(api_key="************************")
+        self.client = OpenAI(api_key="***************************")
         self.results = []
         self.prompt_text = """
 

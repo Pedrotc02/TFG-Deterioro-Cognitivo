@@ -31,7 +31,7 @@ class RoBERTa:
 
         if indices_modelB:
             texts_modelB = [texts[i] for i in indices_modelB]
-            pred_nivel2 = self._predict(self.modelBinary, self.tokenizerMulti, texts_modelB)
+            pred_nivel2 = self._predict(self.modelMulti, self.tokenizerMulti, texts_modelB)
 
             j = 0
             for i in range(len(pred_nivel1)):

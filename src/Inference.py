@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 from joblib import load
+import FeatureExtraction as fe
+import ProcessingData as pData
+import json
 
 
 class Inference:
@@ -19,48 +22,63 @@ class Inference:
             raise ValueError("No se han cargado los modelos correctamente")
 
 
-    def hierarchical_classification(self, X_input_modelA, X_input_modelB):
-        pred_nivel1 = self.modelA.predict(X_input_modelA)
+    def hierarchical_classification(self, df, output_path, df_complete):
+        pred_nivel1 = self.modelA.predict(df)
+
         resultado = []
+        indices_modelB = [i for i, pred in enumerate(pred_nivel1) if pred != 0]
 
-        if X_input_modelA.shape[0] != X_input_modelB.shape[0]:
-            raise ValueError("Las entradas para modelA y modelB no tienen el mismo número de muestras.")
-
-        indices_modelB = [i for i, clase in enumerate(pred_nivel1) if clase != 0]
-
-        if len(indices_modelB) > 0:
-            X_modelB = X_input_modelB[indices_modelB]
-            pred_nivel2 = self.modelB.predict(X_modelB)
+        if indices_modelB:
+            features_modelB = df.iloc[indices_modelB]
+            pred_nivel2 = self.modelB.predict(features_modelB)
 
             j = 0
             for i in range(len(pred_nivel1)):
                 if pred_nivel1[i] == 0:
-                    resultado.append(0)
+                    resultado.append(0)  # No hay deterioro
                 else:
                     resultado.append(pred_nivel2[j])
                     j += 1
         else:
-            resultado = [0] * len(pred_nivel1)
+            resultado = [0] * len(pred_nivel1)  # Todos sanos
 
-        return np.array(resultado)
+        df["CodigoSujeto"] = df_complete["CodigoSujeto"]
+        df["Grupo"] = df_complete["Grupo"]
+        df["predicted_label"] = resultado
 
-
+        df.to_csv(output_path, sep='\t', index=False)
     
 
-    def predict(self, X_input_modelA, X_input_modelB, output_path):
-        if self.modelA is None or self.modelB is None:
-            raise ValueError("Los modelos no están cargados. Carga los modelos primero.")
-        
-        pred = self.hierarchical_classification(X_input_modelA, X_input_modelB)
 
-        data = {
-            "Grupo-Prediccion": pred
-        }
 
-        df_result = pd.DataFrame(data)
 
-        cols = ["Grupo-Prediccion"]
-        df_result = df_result[cols]
+# Prueba de la clase Inference
+df = pd.read_csv("./data/dataset.tsv", sep="\t")
 
-        df_result.to_csv(output_path, sep='\t', index=False)
+agrupado = df.groupby(["CodigoSujeto", "Edad", "Grupo"]).agg({
+        "Sentence": lambda Sentence: " ".join(Sentence),
+        "DuracionFrase": "mean",
+        "DuracionPalabra": "mean"
+    }).reset_index()
 
+agrupado.to_csv("./data/dataset_agrupado.tsv", sep="\t", index=False)
+
+
+processingData = pData.ProcessingData("./data/dataset_agrupado.tsv", "Sentence", "./data/dataset_agrupado_features.tsv", "./data/dataset_agrupado_featuresFilter.tsv")
+processingData.processDataset()
+
+with open("./data/commonFeatures/columns.json", "r") as f:
+    selected_features = json.load(f)
+
+inference = Inference("./models/model_automl_binaryClass.pkl", "./models/model_automl_multiclass.pkl")
+inference.loadModels()
+df = pd.read_csv("./data/dataset_agrupado_features.tsv", sep="\t")
+dfComplete = df
+
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+df.fillna(df.mean(), inplace=True)
+df.fillna(0, inplace=True)
+
+df = df[selected_features].copy()
+
+inference.hierarchical_classification(df, "./predictions/output_cognitive_automl.tsv", dfComplete)
