@@ -53,7 +53,7 @@ class Inference:
 
 
 # Prueba de la clase Inference
-df = pd.read_csv("./data/dataset.tsv", sep="\t")
+df = pd.read_csv("./data/separacionTemas/lugar_favorito.tsv", sep="\t")
 
 agrupado = df.groupby(["CodigoSujeto", "Edad", "Grupo"]).agg({
         "Sentence": lambda Sentence: " ".join(Sentence),
@@ -61,18 +61,23 @@ agrupado = df.groupby(["CodigoSujeto", "Edad", "Grupo"]).agg({
         "DuracionPalabra": "mean"
     }).reset_index()
 
-agrupado.to_csv("./data/dataset_agrupado.tsv", sep="\t", index=False)
+agrupado.to_csv("./data/separacionTemas/lugar_favorito.tsv", sep="\t", index=False)
 
 
-processingData = pData.ProcessingData("./data/dataset_agrupado.tsv", "Sentence", "./data/dataset_agrupado_features.tsv", "./data/dataset_agrupado_featuresFilter.tsv")
+processingData = pData.ProcessingData("./data/separacionTemas/lugar_favorito.tsv", "Sentence", "./data/dataset_agrupado_features.tsv", "./data/dataset_agrupado_featuresFilter.tsv")
 processingData.processDataset()
 
-with open("./data/commonFeatures/columns.json", "r") as f:
+with open("./data/commonFeatures/columns_lugar_favorito.json", "r") as f:
     selected_features = json.load(f)
 
-inference = Inference("./models/model_automl_binaryClass.pkl", "./models/model_automl_multiclass.pkl")
+claves_a_borrar = ["Grupo", "CodigoSujeto"]
+for clave in claves_a_borrar:
+    selected_features.remove(clave)
+
+inference = Inference("./models/model_automl_lugar_favorito_binaryClass.pkl", "./models/model_automl_lugar_favorito_multiclass.pkl")
 inference.loadModels()
 df = pd.read_csv("./data/dataset_agrupado_features.tsv", sep="\t")
+
 dfComplete = df
 
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
@@ -81,4 +86,4 @@ df.fillna(0, inplace=True)
 
 df = df[selected_features].copy()
 
-inference.hierarchical_classification(df, "./predictions/output_cognitive_automl.tsv", dfComplete)
+inference.hierarchical_classification(df, "./predictions/output_cognitive_automl_lugar_favorito.tsv", dfComplete)

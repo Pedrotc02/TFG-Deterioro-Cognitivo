@@ -95,6 +95,6 @@ class Metrics:
 
 
 # Prueba 
-df = pd.read_csv("./predictions/output_cognitive_roberta.tsv", sep="\t")
+df = pd.read_csv("./predictions/output_cognitive_roberta_chica_ocupada.tsv", sep="\t")
 metrics = Metrics(df)
-metrics.saveMetrics("./predictions/output_cognitive_automl.tsv")
+metrics.saveMetrics("./predictions/output_cognitive_roberta_chica_ocupada.tsv")

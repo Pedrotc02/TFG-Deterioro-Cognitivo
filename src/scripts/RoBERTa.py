@@ -5,8 +5,8 @@ import torch
 
 class RoBERTa:
     def __init__(self):
-        self.tokenizerBinary = AutoTokenizer.from_pretrained("PedroTC/multi_model")
-        self.modelBinary = AutoModelForSequenceClassification.from_pretrained("PedroTC/multi_model")
+        self.tokenizerBinary = AutoTokenizer.from_pretrained("PedroTC/binary_model")
+        self.modelBinary = AutoModelForSequenceClassification.from_pretrained("PedroTC/binary_model")
 
         self.tokenizerMulti = AutoTokenizer.from_pretrained("PedroTC/multi_model")
         self.modelMulti = AutoModelForSequenceClassification.from_pretrained("PedroTC/multi_model")
